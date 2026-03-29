@@ -1,29 +1,71 @@
 package controllers
 
 import (
-	"Today-Todo/models" // 引入刚才定义的 models 包
+	"Today-Todo/models"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
+type createTodoRequest struct {
+	Title       string     `json:"title" binding:"required"`
+	Description string     `json:"description"`
+	Priority    string     `json:"priority"`
+	DueAt       *time.Time `json:"due_at"`
+}
+
+type updateTodoRequest struct {
+	Title       *string    `json:"title"`
+	Description *string    `json:"description"`
+	Priority    *string    `json:"priority"`
+	Completed   *bool      `json:"completed"`
+	DueAt       *time.Time `json:"due_at"`
+}
+
 // CreateTodo 创建任务
 func CreateTodo(c *gin.Context) {
-	var todo models.Todo // 使用 models.Todo
-	if err := c.ShouldBindJSON(&todo); err != nil {
+	var req createTodoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// 使用 models.DB
-	models.DB.Create(&todo)
+	todo := models.Todo{
+		Title:       req.Title,
+		Description: req.Description,
+		Priority:    normalizePriority(req.Priority),
+		DueAt:       req.DueAt,
+	}
+
+	if err := models.DB.Create(&todo).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建任务失败"})
+		return
+	}
+
 	c.JSON(http.StatusOK, todo)
 }
 
 // GetTodos 获取列表
 func GetTodos(c *gin.Context) {
 	var todos []models.Todo
-	models.DB.Find(&todos)
+
+	query := models.DB.Order("created_at desc")
+	if status := c.Query("completed"); status != "" {
+		completed, err := strconv.ParseBool(status)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "completed 参数必须是 true 或 false"})
+			return
+		}
+		query = query.Where("completed = ?", completed)
+	}
+
+	if err := query.Find(&todos).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询任务失败"})
+		return
+	}
+
 	c.JSON(http.StatusOK, todos)
 }
 
@@ -37,12 +79,33 @@ func UpdateTodo(c *gin.Context) {
 		return
 	}
 
-	if err := c.ShouldBindJSON(&todo); err != nil {
+	var req updateTodoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	models.DB.Save(&todo)
+	if req.Title != nil {
+		todo.Title = *req.Title
+	}
+	if req.Description != nil {
+		todo.Description = *req.Description
+	}
+	if req.Priority != nil {
+		todo.Priority = normalizePriority(*req.Priority)
+	}
+	if req.Completed != nil {
+		todo.Completed = *req.Completed
+	}
+	if req.DueAt != nil {
+		todo.DueAt = req.DueAt
+	}
+
+	if err := models.DB.Save(&todo).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新任务失败"})
+		return
+	}
+
 	c.JSON(http.StatusOK, todo)
 }
 
@@ -54,4 +117,13 @@ func DeleteTodo(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+}
+
+func normalizePriority(priority string) string {
+	switch priority {
+	case "high", "medium", "low":
+		return priority
+	default:
+		return "medium"
+	}
 }

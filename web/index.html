@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Today-Todo | 健康专注助手</title>
+  <!-- 使用非默认字体，保持界面更有辨识度。 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/web/style.css" />
+</head>
+<body>
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+
+  <main class="app-shell">
+    <header class="topbar card">
+      <div>
+        <p class="eyebrow">TODAY FOCUS SYSTEM</p>
+        <h1>Today-Todo</h1>
+        <p class="sub">任务、健康、反沉迷一体化面板</p>
+      </div>
+      <button id="refreshBtn" class="btn btn-ghost">刷新数据</button>
+    </header>
+
+    <section class="stats-grid">
+      <article class="card stat-card" id="todoStatCard">
+        <h3>任务完成</h3>
+        <p class="stat-main"><span id="completedTodos">0</span>/<span id="totalTodos">0</span></p>
+        <p class="stat-sub">今日完成率</p>
+      </article>
+
+      <article class="card stat-card">
+        <h3>喝水进度</h3>
+        <div class="ring" id="waterRing"><span id="waterText">0ml</span></div>
+        <p class="stat-sub">目标 2000ml</p>
+      </article>
+
+      <article class="card stat-card">
+        <h3>站立进度</h3>
+        <div class="ring ring-stand" id="standRing"><span id="standText">0分钟</span></div>
+        <p class="stat-sub">目标 30分钟</p>
+      </article>
+
+      <article class="card stat-card warning">
+        <h3>短视频次数</h3>
+        <p class="stat-main danger" id="shortVideoCount">0</p>
+        <p class="stat-sub">建议控制在 5 次以内</p>
+      </article>
+    </section>
+
+    <section class="content-grid">
+      <article class="card todo-panel">
+        <div class="panel-head">
+          <h2>任务清单</h2>
+          <span class="chip">可编辑</span>
+        </div>
+
+        <form id="todoForm" class="todo-form">
+          <input id="todoTitle" type="text" placeholder="新增任务标题" required />
+          <input id="todoDescription" type="text" placeholder="任务说明（可选）" />
+          <select id="todoPriority">
+            <option value="high">高优先级</option>
+            <option value="medium" selected>中优先级</option>
+            <option value="low">低优先级</option>
+          </select>
+          <button class="btn btn-primary" type="submit">添加任务</button>
+        </form>
+
+        <ul id="todoList" class="todo-list"></ul>
+      </article>
+
+      <article class="card health-panel">
+        <div class="panel-head">
+          <h2>健康与防沉迷打卡</h2>
+          <span class="chip chip-live">提醒中</span>
+        </div>
+
+        <div class="quick-actions">
+          <button class="btn btn-accent" id="drink250Btn">喝水 +250ml</button>
+          <button class="btn btn-accent" id="drink500Btn">喝水 +500ml</button>
+          <button class="btn btn-success" id="stand5Btn">站立 +5分钟</button>
+          <button class="btn btn-danger" id="shortVideoBtn">我刷了短视频</button>
+        </div>
+
+        <div class="focus-box" id="focusBox">
+          <p>专注评分</p>
+          <h3 id="focusScore">0</h3>
+          <small>分数越高，代表今天的节律越健康。</small>
+        </div>
+
+        <p class="hint">提醒来源：服务端 SSE + 本地兜底定时器</p>
+      </article>
+    </section>
+  </main>
+
+  <!-- 醒目提醒弹窗：用于喝水/站立/防沉迷动画提示。 -->
+  <section id="reminderModal" class="reminder-modal hidden" aria-live="polite">
+    <div class="reminder-card">
+      <p id="reminderType" class="reminder-type">提醒</p>
+      <h3 id="reminderTitle">现在该行动了</h3>
+      <p id="reminderMessage">保持专注，今天继续推进目标。</p>
+      <div class="reminder-actions">
+        <button id="ackReminder" class="btn btn-primary">我已处理</button>
+        <button id="quickShortVideo" class="btn btn-danger">记录短视频 1 次</button>
+      </div>
+    </div>
+  </section>
+
+  <script src="/web/app.js"></script>
+</body>
+</html>
