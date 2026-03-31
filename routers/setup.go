@@ -32,6 +32,7 @@ func SetupRouter() *gin.Engine {
 		v1.POST("/health/stand", controllers.RecordStand)
 		v1.POST("/health/short-video", controllers.RecordShortVideo)
 		v1.GET("/health/daily-progress", controllers.GetDailyProgress)
+		v1.GET("/insights/today", controllers.GetTodayInsights)
 
 		// 实时提醒事件流 + 配置
 		v1.GET("/reminders/stream", controllers.StreamReminders)

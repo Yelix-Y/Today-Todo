@@ -29,6 +29,12 @@ const el = {
   waterRing: document.getElementById("waterRing"),
   standRing: document.getElementById("standRing"),
   focusScore: document.getElementById("focusScore"),
+  insightRisk: document.getElementById("insightRisk"),
+  insightMomentum: document.getElementById("insightMomentum"),
+  insightAction: document.getElementById("insightAction"),
+  insightNudge: document.getElementById("insightNudge"),
+  insightTasks: document.getElementById("insightTasks"),
+  toastRoot: document.getElementById("toastRoot"),
   reminderModal: document.getElementById("reminderModal"),
   reminderType: document.getElementById("reminderType"),
   reminderTitle: document.getElementById("reminderTitle"),
@@ -117,7 +123,8 @@ async function createTodo(event) {
   });
 
   el.todoForm.reset();
-  await Promise.all([loadTodos(), loadStats()]);
+  await Promise.all([loadTodos(), loadStats(), loadInsights()]);
+  showToast("任务已添加", "success");
 }
 
 async function toggleTodo(todo) {
@@ -126,7 +133,8 @@ async function toggleTodo(todo) {
     body: JSON.stringify({ completed: !todo.completed }),
   });
 
-  await Promise.all([loadTodos(), loadStats()]);
+  await Promise.all([loadTodos(), loadStats(), loadInsights()]);
+  showToast(todo.completed ? "任务已恢复" : "任务已完成", "success");
 }
 
 async function editTodo(todo) {
@@ -142,11 +150,13 @@ async function editTodo(todo) {
   });
 
   await loadTodos();
+  showToast("任务已更新", "success");
 }
 
 async function removeTodo(id) {
   await request(`/todos/${id}`, { method: "DELETE" });
-  await Promise.all([loadTodos(), loadStats()]);
+  await Promise.all([loadTodos(), loadStats(), loadInsights()]);
+  showToast("任务已删除", "info");
 }
 
 async function recordWater(amount) {
@@ -155,7 +165,8 @@ async function recordWater(amount) {
     body: JSON.stringify({ user_id: USER_ID, amount }),
   });
 
-  await loadStats();
+  await Promise.all([loadStats(), loadInsights()]);
+  showToast(`已记录喝水 +${amount}ml`, "success");
 }
 
 async function recordStand(durationSeconds = 300) {
@@ -164,7 +175,8 @@ async function recordStand(durationSeconds = 300) {
     body: JSON.stringify({ user_id: USER_ID, duration: durationSeconds }),
   });
 
-  await loadStats();
+  await Promise.all([loadStats(), loadInsights()]);
+  showToast("已记录站立 +5 分钟", "success");
 }
 
 async function recordShortVideo(count = 1) {
@@ -173,22 +185,78 @@ async function recordShortVideo(count = 1) {
     body: JSON.stringify({ user_id: USER_ID, count }),
   });
 
-  await loadStats();
+  await Promise.all([loadStats(), loadInsights()]);
+  showToast(`已记录短视频 ${count} 次`, "info");
 }
 
 async function loadStats() {
   const result = await request(`/health/daily-progress?user_id=${USER_ID}`);
   const stats = result.data;
 
-  el.completedTodos.textContent = stats.completed_todos;
-  el.totalTodos.textContent = stats.total_todos;
-  el.shortVideoCount.textContent = stats.short_video_count;
-  el.waterText.textContent = `${stats.water_total}ml`;
-  el.standText.textContent = `${stats.stand_total_minutes}分钟`;
-  el.focusScore.textContent = stats.focus_score;
+  setTextWithPop(el.completedTodos, stats.completed_todos);
+  setTextWithPop(el.totalTodos, stats.total_todos);
+  setTextWithPop(el.shortVideoCount, stats.short_video_count);
+  setTextWithPop(el.waterText, `${stats.water_total}ml`);
+  setTextWithPop(el.standText, `${stats.stand_total_minutes}分钟`);
+  setTextWithPop(el.focusScore, stats.focus_score);
 
   el.waterRing.style.setProperty("--p", Number(stats.water_progress || 0).toFixed(1));
   el.standRing.style.setProperty("--p", Number(stats.stand_progress || 0).toFixed(1));
+}
+
+function popStat(element) {
+  element.classList.remove("stat-pop");
+  void element.offsetWidth;
+  element.classList.add("stat-pop");
+}
+
+function setTextWithPop(element, value) {
+  const next = String(value);
+  if (element.textContent !== next) {
+    element.textContent = next;
+    popStat(element);
+  }
+}
+
+function showToast(message, type = "info") {
+  if (!el.toastRoot) return;
+
+  const node = document.createElement("div");
+  node.className = `toast ${type}`;
+  node.textContent = message;
+  el.toastRoot.appendChild(node);
+
+  setTimeout(() => {
+    node.remove();
+  }, 2200);
+}
+
+async function loadInsights() {
+  const result = await request(`/insights/today?user_id=${USER_ID}`);
+  const data = result.data || {};
+
+  el.insightRisk.textContent = mapRiskLevel(data.risk_level);
+  el.insightRisk.className = riskClassName(data.risk_level);
+  el.insightMomentum.textContent = data.momentum || "节奏稳定";
+  el.insightAction.textContent = data.suggested_action || "先完成一个最小可交付任务。";
+  el.insightNudge.textContent = data.suggested_nudge || "保持节律。";
+
+  el.insightTasks.innerHTML = "";
+  const tasks = Array.isArray(data.top_tasks) ? data.top_tasks : [];
+  if (tasks.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "insight-task-empty";
+    empty.textContent = "暂无待办，今天表现不错。";
+    el.insightTasks.appendChild(empty);
+    return;
+  }
+
+  tasks.forEach((task) => {
+    const li = document.createElement("li");
+    li.className = "insight-task-item";
+    li.textContent = `${task.title} (${mapPriority(task.priority)})`;
+    el.insightTasks.appendChild(li);
+  });
 }
 
 function showReminder(reminder) {
@@ -271,13 +339,35 @@ function mapPriority(priority) {
   }
 }
 
+function mapRiskLevel(level) {
+  switch (level) {
+    case "high":
+      return "高";
+    case "medium":
+      return "中";
+    default:
+      return "低";
+  }
+}
+
+function riskClassName(level) {
+  switch (level) {
+    case "high":
+      return "risk-high";
+    case "medium":
+      return "risk-medium";
+    default:
+      return "risk-low";
+  }
+}
+
 function bindEvents() {
   el.todoForm.addEventListener("submit", (event) => {
     createTodo(event).catch((error) => window.alert(error.message));
   });
 
   el.refreshBtn.addEventListener("click", () => {
-    Promise.all([loadTodos(), loadStats()]).catch((error) => window.alert(error.message));
+    Promise.all([loadTodos(), loadStats(), loadInsights()]).catch((error) => window.alert(error.message));
   });
 
   el.drink250Btn.addEventListener("click", () => recordWater(250).catch((error) => window.alert(error.message)));
@@ -310,7 +400,8 @@ function bindEvents() {
 async function init() {
   bindEvents();
   await loadReminderConfig();
-  await Promise.all([loadTodos(), loadStats()]);
+  await Promise.all([loadTodos(), loadStats(), loadInsights()]);
+  document.body.classList.add("is-ready");
   setupSSE();
   setupLocalFallbackReminders();
 }

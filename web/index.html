@@ -7,7 +7,7 @@
   <!-- 使用非默认字体，保持界面更有辨识度。 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/web/style.css" />
 </head>
 <body>
@@ -16,12 +16,15 @@
 
   <main class="app-shell">
     <header class="topbar card">
-      <div>
+      <div class="title-wrap">
         <p class="eyebrow">TODAY FOCUS SYSTEM</p>
         <h1>Today-Todo</h1>
-        <p class="sub">任务、健康、反沉迷一体化面板</p>
+        <p class="sub">任务推进、健康节律、行为洞察的一体化控制台</p>
       </div>
-      <button id="refreshBtn" class="btn btn-ghost">刷新数据</button>
+      <div class="topbar-actions">
+        <span class="status-dot">LIVE</span>
+        <button id="refreshBtn" class="btn btn-ghost">刷新数据</button>
+      </div>
     </header>
 
     <section class="stats-grid">
@@ -92,6 +95,26 @@
 
         <p class="hint">提醒来源：服务端 SSE + 本地兜底定时器</p>
       </article>
+
+      <article class="card insights-panel">
+        <div class="panel-head">
+          <h2>今日智能洞察</h2>
+          <span class="chip">实验功能</span>
+        </div>
+
+        <div class="insight-summary">
+          <p>风险等级：<strong id="insightRisk">-</strong></p>
+          <p>节奏判断：<strong id="insightMomentum">-</strong></p>
+        </div>
+
+        <div class="insight-copy">
+          <p id="insightAction">系统正在生成建议...</p>
+          <p class="muted" id="insightNudge">请稍候</p>
+        </div>
+
+        <h3>推荐下一步任务</h3>
+        <ul id="insightTasks" class="insight-task-list"></ul>
+      </article>
     </section>
   </main>
 
@@ -107,6 +130,8 @@
       </div>
     </div>
   </section>
+
+  <div id="toastRoot" class="toast-root" aria-live="polite" aria-atomic="true"></div>
 
   <script src="/web/app.js"></script>
 </body>
